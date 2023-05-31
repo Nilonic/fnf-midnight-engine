@@ -1,3 +1,56 @@
+def display_message_box(title, error_code, message):
+    box_width = 400
+    box_height = 300
+    box_x = (window_width - box_width) // 2
+    box_y = (window_height - box_height) // 2
+
+    pygame.draw.rect(window, (255, 255, 255), (box_x, box_y, box_width, box_height))
+    pygame.draw.rect(window, (0, 0, 0), (box_x, box_y, box_width, box_height), 3)
+
+    font_title = pygame.font.Font(None, 36)
+    text_title = font_title.render(title, True, (0, 0, 0))
+    text_rect_title = text_title.get_rect(center=(box_x + box_width // 2, box_y + 40))
+    window.blit(text_title, text_rect_title)
+
+    font_error = pygame.font.Font(None, 24)
+    text_error = font_error.render(f"Error Code: {error_code}", True, (0, 0, 0))
+    text_rect_error = text_error.get_rect(center=(box_x + box_width // 2, box_y + 80))
+    window.blit(text_error, text_rect_error)
+
+    font_message = pygame.font.Font(None, 28)
+    lines = message.split("\n")
+    line_height = 30
+    for i, line in enumerate(lines):
+        text_message = font_message.render(line, True, (0, 0, 0))
+        text_rect_message = text_message.get_rect(center=(box_x + box_width // 2, box_y + 140 + i * line_height))
+        window.blit(text_message, text_rect_message)
+
+    ok_button_rect = pygame.Rect(box_x + box_width - 260, box_y + box_height - 60, 120, 40)
+    pygame.draw.rect(window, (200, 200, 200), ok_button_rect)
+    font_button = pygame.font.Font(None, 24)
+    text_ok = font_button.render("OK", True, (0, 0, 0))
+    text_rect_ok = text_ok.get_rect(center=ok_button_rect.center)
+    window.blit(text_ok, text_rect_ok)
+
+    pygame.display.flip()  # Update the display
+    clock.tick(60)
+
+    return ok_button_rect
+
+def wait_for_button_press(ok_button_rect):
+    button_pressed = False
+
+    while not button_pressed:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if ok_button_rect.collidepoint(event.pos):
+                    button_pressed = True
+            pygame.display.flip()
+            clock.tick(60)
+
 import sys
 import platform
 try:
@@ -7,6 +60,7 @@ try:
     clock = pygame.time.Clock()
     import psutil
     import env
+    import settings
 except:
     import os  
     # Get the operating system name
@@ -30,6 +84,7 @@ except:
         clock = pygame.time.Clock()
         import psutil
         import env
+        import settings
     except:
         print("something went wrong... try installing the following modules manualy:")
         for mod in modulesToInstall:
@@ -37,7 +92,10 @@ except:
         exit(1)
 
 print(f"{env.engine_name} V{env.engine_version} starting up...")
-print("using ShitUI V 1.0.0")
+print(f"using {env.ui_name} V{env.ui_version}")
+#init settings
+settings.check_and_init()
+
 # Initialize Pygame
 pygame.init()
 
@@ -84,6 +142,9 @@ while running:
                 selected_option = (selected_option - 1) % len(menu_options)
             elif event.key == pygame.K_DOWN:
                 selected_option = (selected_option + 1) % len(menu_options)
+            elif event.key == pygame.K_BACKQUOTE:
+                    box_rect = display_message_box("test of message box error stuff", 0, "there is no error\nits just a test")  # Display the message box and get its rectangle
+                    wait_for_button_press(box_rect)  # Wait for button press
             elif event.key == pygame.K_RETURN:
                 if(menu_options[selected_option] == "Exit"):
                     sys.exit(0)
@@ -146,5 +207,10 @@ while running:
     # Update the display
     pygame.display.flip()
 
+    if(settings.read_settings("fps") < 10):
+        settings.update_settings("fps", 30)
+        box_rect = display_message_box("Settings Error", 1, f"your FPS setting it set to {settings.read_settings('fps')}\nminimum is 10\nwe've set it to 30 for you")  # Display the message box and get its rectangle
+        wait_for_button_press(box_rect)  # Wait for button press
     # Delay for consistent frame rate
-    clock.tick(60)
+    clock.tick(settings.read_settings("fps"))
+
